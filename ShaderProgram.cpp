@@ -1,14 +1,14 @@
 #include "ShaderProgram.h"
 #include <iostream>
 
-// Helper to compile an individual shader
+// Compile a single shader from given source
 static GLuint compileShader(GLenum type, const char* source)
 {
     GLuint shader = glCreateShader(type);
     glShaderSource(shader, 1, &source, nullptr);
     glCompileShader(shader);
 
-    // Check for compilation errors
+    // Check for errors
     GLint success;
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
     if(!success)
@@ -25,12 +25,13 @@ GLuint createShaderProgram(const char* vertexSrc, const char* fragmentSrc)
     GLuint vs = compileShader(GL_VERTEX_SHADER, vertexSrc);
     GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragmentSrc);
 
+    // Link them into a program
     GLuint program = glCreateProgram();
     glAttachShader(program, vs);
     glAttachShader(program, fs);
     glLinkProgram(program);
 
-    // Check link errors
+    // Check for link errors
     GLint success;
     glGetProgramiv(program, GL_LINK_STATUS, &success);
     if(!success)

@@ -1,55 +1,64 @@
 #include "Drone.h"
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
 
-// Store a single VAO for our unit cube:
+// A single VAO for our unit cube geometry:
 static GLuint gCubeVAO = 0;
 static bool   gDroneGeometryInitialized = false;
 
-// Create a unit cube in a VAO for repeated draw calls
+/**
+ * Create a unit cube ([-0.5,0.5]) in a VAO for repeated draw calls.
+ * (You can expand to include normals or texture coords if needed.)
+ */
 void initDroneGeometry()
 {
-    if (gDroneGeometryInitialized) return;
+    if (gDroneGeometryInitialized) return; // do it only once
 
     float vertices[] = {
-        //   X      Y      Z
-        // front
+        //    X      Y      Z
+        // front face
         -0.5f, -0.5f,  0.5f,
          0.5f, -0.5f,  0.5f,
          0.5f,  0.5f,  0.5f,
          0.5f,  0.5f,  0.5f,
         -0.5f,  0.5f,  0.5f,
         -0.5f, -0.5f,  0.5f,
-        // back
+
+        // back face
         -0.5f, -0.5f, -0.5f,
         -0.5f,  0.5f, -0.5f,
          0.5f,  0.5f, -0.5f,
          0.5f,  0.5f, -0.5f,
          0.5f, -0.5f, -0.5f,
         -0.5f, -0.5f, -0.5f,
-        // left
+
+        // left face
         -0.5f,  0.5f,  0.5f,
         -0.5f,  0.5f, -0.5f,
         -0.5f, -0.5f, -0.5f,
         -0.5f, -0.5f, -0.5f,
         -0.5f, -0.5f,  0.5f,
         -0.5f,  0.5f,  0.5f,
-        // right
+
+        // right face
          0.5f,  0.5f,  0.5f,
          0.5f, -0.5f,  0.5f,
          0.5f, -0.5f, -0.5f,
          0.5f, -0.5f, -0.5f,
          0.5f,  0.5f, -0.5f,
          0.5f,  0.5f,  0.5f,
-        // top
+
+        // top face
         -0.5f,  0.5f, -0.5f,
         -0.5f,  0.5f,  0.5f,
          0.5f,  0.5f,  0.5f,
          0.5f,  0.5f,  0.5f,
          0.5f,  0.5f, -0.5f,
         -0.5f,  0.5f, -0.5f,
-        // bottom
+
+        // bottom face
         -0.5f, -0.5f, -0.5f,
          0.5f, -0.5f, -0.5f,
          0.5f, -0.5f,  0.5f,
@@ -70,110 +79,121 @@ void initDroneGeometry()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
+    // Unbind
     glBindVertexArray(0);
 
     gDroneGeometryInitialized = true;
 }
 
-// Helper to draw a cube with a given model transform & shader
+/**
+ * Helper to draw our unit cube with the given model transform & shader.
+ */
 static void drawCube(const glm::mat4& model, GLuint shaderProg)
 {
-    // Make sure we’re using the correct shader
     glUseProgram(shaderProg);
-
-    // Upload the model matrix
     GLint modelLoc = glGetUniformLocation(shaderProg, "model");
-    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &model[0][0]);
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     glBindVertexArray(gCubeVAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
 }
 
-// Draw the drone with the specified propeller angle & given shader
-void drawDrone(float propellerAngle, GLuint shaderProgram)
+/**
+ * Draw the drone. 
+ *  - propAngle:  spin angle (in degrees) for the propellers.
+ *  - rollAngle:  roll angle (in degrees) about the drone’s front/back axis.
+ *  - shaderProg: which shader to use for rendering.
+ */
+void drawDrone(float propAngle, float rollAngle, GLuint shaderProg)
 {
-    float radSpin = glm::radians(propellerAngle);
+    // Convert degrees to radians for rotations
+    float propRad = glm::radians(propAngle);
+    float rollRad = glm::radians(rollAngle);
 
-    // Overall transform
-    glm::mat4 droneTransform = glm::mat4(1.0f);
+    // The main transform for the drone body
+    glm::mat4 droneTransform(1.0f);
+
+    // 1) Apply a roll around the Z-axis (assuming +Z is the "front-back" axis).
+    droneTransform = glm::rotate(droneTransform, rollRad, glm::vec3(0.0f, 0.0f, 1.0f));
+
+    // 2) Scale and shift upward so it’s nicely centered
     droneTransform = glm::scale(droneTransform, glm::vec3(1.2f));
     droneTransform = glm::translate(droneTransform, glm::vec3(0.0f, 0.2f, 0.0f));
 
-    // Main body
+    // --- MAIN FUSELAGE ---
     {
         glm::mat4 body = droneTransform;
         body = glm::scale(body, glm::vec3(1.5f, 0.4f, 0.6f));
-        drawCube(body, shaderProgram);
+        drawCube(body, shaderProg);
     }
 
-    // Nose
+    // --- NOSE (front extension) ---
     {
         glm::mat4 nose = droneTransform;
         nose = glm::translate(nose, glm::vec3(0.0f, 0.0f, 0.6f));
         nose = glm::scale(nose, glm::vec3(0.4f, 0.3f, 0.4f));
-        drawCube(nose, shaderProgram);
+        drawCube(nose, shaderProg);
     }
 
-    // Left arm
+    // --- ARMS (left & right) ---
     {
         glm::mat4 armL = droneTransform;
         armL = glm::translate(armL, glm::vec3(-1.2f, 0.0f, 0.0f));
         armL = glm::scale(armL, glm::vec3(0.3f, 0.15f, 0.8f));
-        drawCube(armL, shaderProgram);
+        drawCube(armL, shaderProg);
     }
-
-    // Right arm
     {
         glm::mat4 armR = droneTransform;
         armR = glm::translate(armR, glm::vec3(1.2f, 0.0f, 0.0f));
         armR = glm::scale(armR, glm::vec3(0.3f, 0.15f, 0.8f));
-        drawCube(armR, shaderProgram);
+        drawCube(armR, shaderProg);
     }
 
-    // Propellers
+    // --- PROPELLERS ---
+    // Spin them around the Y-axis via propRad
     auto drawPropeller = [&](float xOffset)
     {
-        // hub
+        // Hub
         {
             glm::mat4 hub = droneTransform;
             hub = glm::translate(hub, glm::vec3(xOffset, 0.3f, 0.0f));
-            hub = glm::rotate(hub, radSpin, glm::vec3(0.0f, 1.0f, 0.0f));
+            hub = glm::rotate(hub, propRad, glm::vec3(0.0f, 1.0f, 0.0f));
             hub = glm::scale(hub, glm::vec3(0.1f));
-            drawCube(hub, shaderProgram);
+            drawCube(hub, shaderProg);
         }
         // 4 blades
         for(int i = 0; i < 4; i++)
         {
             glm::mat4 blade = droneTransform;
             blade = glm::translate(blade, glm::vec3(xOffset, 0.3f, 0.0f));
-            blade = glm::rotate(blade, radSpin, glm::vec3(0.0f, 1.0f, 0.0f));
+            blade = glm::rotate(blade, propRad, glm::vec3(0.0f, 1.0f, 0.0f));
             blade = glm::rotate(blade, glm::radians(90.0f * i), glm::vec3(0.0f, 1.0f, 0.0f));
             blade = glm::translate(blade, glm::vec3(0.0f, 0.0f, 0.2f));
             blade = glm::scale(blade, glm::vec3(0.05f, 0.02f, 0.4f));
-            drawCube(blade, shaderProgram);
+            drawCube(blade, shaderProg);
         }
     };
     drawPropeller(-1.2f);
     drawPropeller(1.2f);
 
-    // Legs
+    // --- LEGS ---
     {
         glm::mat4 legL = droneTransform;
         legL = glm::translate(legL, glm::vec3(-0.5f, -0.3f, 0.0f));
         legL = glm::scale(legL, glm::vec3(0.1f, 0.4f, 0.1f));
-        drawCube(legL, shaderProgram);
+        drawCube(legL, shaderProg);
 
         glm::mat4 legR = droneTransform;
         legR = glm::translate(legR, glm::vec3(0.5f, -0.3f, 0.0f));
         legR = glm::scale(legR, glm::vec3(0.1f, 0.4f, 0.1f));
-        drawCube(legR, shaderProgram);
+        drawCube(legR, shaderProg);
     }
 }
 
 void cleanupDrone()
 {
-    if (gCubeVAO)
+    if(gCubeVAO)
     {
         glDeleteVertexArrays(1, &gCubeVAO);
         gCubeVAO = 0;

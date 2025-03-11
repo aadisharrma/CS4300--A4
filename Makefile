@@ -1,7 +1,6 @@
 CXX      = g++
 CXXFLAGS = -Wall -std=c++17 -I./include
 LDFLAGS  = -L./lib
-# On macOS, GLFW typically needs Cocoa, IOKit, and CoreVideo frameworks, plus OpenGL:
 LIBS     = -lglad -lglfw3 -framework Cocoa -framework IOKit -framework CoreVideo -framework OpenGL
 
 SRCS   = main.cpp Drone.cpp ShaderProgram.cpp
