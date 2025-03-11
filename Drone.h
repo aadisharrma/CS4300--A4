@@ -1,22 +1,31 @@
 #pragma once
 #include <glad/glad.h>
+#include <glm/glm.hpp>
 
 /**
  * Initialize geometry needed by the drone (e.g., the cube VAO).
- * Call once at program startup.
  */
 void initDroneGeometry();
 
 /**
- * Draw the drone with the specified propeller angle and roll angle.
- *
- * @param propAngle   Degrees of rotation for the propellers (spins continuously).
- * @param rollAngle   Degrees of rotation about the drone’s front/back axis (0..360).
- * @param shaderProg  The currently active shader program ID.
+ * Draw the drone with these parameters:
+ *  - propAngle: rotation for propellers (in degrees).
+ *  - rollAngle: sideways roll (in degrees) from Part 2.
+ *  - yaw:       yaw rotation around Y (in degrees).
+ *  - pitch:     pitch rotation around X (in degrees).
+ *  - position:  world-space position of the drone’s origin.
+ *  - shaderProg: current shader program.
  */
-void drawDrone(float propAngle, float rollAngle, GLuint shaderProg);
+void drawDrone(
+    float propAngle,
+    float rollAngle,
+    float yaw,
+    float pitch,
+    const glm::vec3& position,
+    GLuint shaderProg
+);
 
 /**
- * Cleanup drone geometry at program exit (deletes VAOs, etc.).
+ * Cleanup (delete VAOs, etc.).
  */
 void cleanupDrone();
