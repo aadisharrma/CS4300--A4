@@ -10,7 +10,6 @@
 #include "Drone.h"
 #include "ShaderProgram.h"
 
-
 // Window size
 static int gWindowWidth  = 800;
 static int gWindowHeight = 600;
@@ -24,8 +23,10 @@ static float gRollSpeed   = 180.0f; // deg/sec
 
 // Part 3: Drone pos/orientation
 static glm::vec3 gDronePos = glm::vec3(0.f, 1.f, 0.f);
-// We'll start with yaw = -45 so the drone faces the camera 1 vantage
-static float gDroneYaw   = -45.f; 
+
+// Here we pick **yaw=45** so the drone faces the camera at (6,3,6).
+// You can tweak this angle if your model faces a different way in local space.
+static float gDroneYaw   = 45.f; 
 static float gDronePitch = 0.f;
 
 // Movement factor
@@ -33,12 +34,13 @@ static float gMoveFactor  = 0.01f;  // distance per (propSpeed * dt)
 static float gTurnRate    = 90.0f;  // deg/sec for arrow keys
 
 // Part 4: Multiple cameras
-// We'll START with camera 1 so we see the drone from an angle
-static int   gCurrentCamera = 1;  
+// We'll START with camera=0 so the program opens in the angled vantage
+// that sees the drone's front.
+static int   gCurrentCamera = 0;  
 static float gChopperAngle  = 0.0f; 
 static float gChopperSpeed  = 30.f; // deg/sec overhead orbit
 
-
+//---------------------------------------------
 // GLFW Callbacks
 static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
@@ -47,9 +49,11 @@ static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
     glViewport(0, 0, width, height);
 }
 
+//---------------------------------------------
 // Build a forward vector from yaw/pitch
 static glm::vec3 getForwardVector(float yawDeg, float pitchDeg)
 {
+    // If yaw=0 => facing +Z in your local space, adjust if your code uses -Z
     glm::vec3 baseForward(0.f, 0.f, 1.f);
     glm::mat4 transform(1.0f);
 
@@ -61,7 +65,8 @@ static glm::vec3 getForwardVector(float yawDeg, float pitchDeg)
     return glm::normalize(glm::vec3(dir4));
 }
 
-// Process user input
+//---------------------------------------------
+// Process user input (movement, camera switching, etc.)
 static void processInput(GLFWwindow* window, float dt)
 {
     // Close with ESC
@@ -77,7 +82,7 @@ static void processInput(GLFWwindow* window, float dt)
         if(gPropSpeed < 0.f) gPropSpeed = 0.f;
     }
 
-    // Single 360 roll if not already rolling - switch to 'j' key for sideways roll
+    // Single 360 roll if not already rolling - using 'j' key
     if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS && !gIsRolling)
     {
         gIsRolling = true;
@@ -107,52 +112,63 @@ static void processInput(GLFWwindow* window, float dt)
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
         gDronePitch -= turn;
 
-    // Reset with 'd' or 'D' key
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-    {
-        // Put drone at center above ground, preserve the original orientation
-        gDronePos   = glm::vec3(0.f, 1.f, 0.f);
-        gDroneYaw   = -45.f;  // Start with the initial orientation
-        gDronePitch = 0.f;
-        gIsRolling  = false;
-        gRollAngle  = 0.f;
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS){
+    // 1. Reset drone position & orientation
+    gDronePos   = glm::vec3(0.f, 1.f, 0.f);
+    gDroneYaw   = 45.f;  // or 0.f, -45.f, etc. – whichever angle “faces” the camera
+    gDronePitch = 0.f;
+    gIsRolling  = false;
+    gRollAngle  = 0.f;
+    gCurrentCamera = 0;
+    gPropSpeed = 180.f;
 
-        // (Optionally reset gPropSpeed etc. if you like)
-        // gPropSpeed = 180.f;
     }
 
     // Switch cameras
+    // 0 => Angled vantage (startup)
+    // 1 => Top-down
+    // 2 => Overhead orbit
+    // 3 => First-person
     if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS)
         gCurrentCamera = 1;
     if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS)
         gCurrentCamera = 2;
     if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS)
         gCurrentCamera = 3;
+    if (glfwGetKey(window, GLFW_KEY_0) == GLFW_PRESS)
+        gCurrentCamera = 0; // if you want to switch back to angled vantage
 }
 
-
+//---------------------------------------------
 // Return a view matrix for whichever camera is active
 static glm::mat4 getViewMatrix(float dt)
 {
-    // Even if camera 2 not active, we update chopper angle
+    // Keep updating chopper angle for the overhead orbit camera
     gChopperAngle += gChopperSpeed * dt;
     if(gChopperAngle > 360.f)
         gChopperAngle = fmod(gChopperAngle, 360.f);
 
     switch(gCurrentCamera)
     {
-    case 1:
+    // CASE 0 = angled vantage at startup
+    case 0:
     {
-        // Camera 1: an angled vantage from (6,3,6)
-        // We'll look at roughly (0,1,0)
         glm::vec3 camPos(6.f, 3.f, 6.f);
         glm::vec3 target(0.f, 1.f, 0.f);
         glm::vec3 up(0.f, 1.f, 0.f);
         return glm::lookAt(camPos, target, up);
     }
+    // CASE 1 = strict top-down
+    case 1:
+    {
+        glm::vec3 camPos(0.f, 15.f, 0.f);  
+        glm::vec3 target(0.f, 0.f, 0.f);   
+        glm::vec3 up(0.f, 0.f, -1.f);      
+        return glm::lookAt(camPos, target, up);
+    }
+    // CASE 2 = overhead "chopper" orbit
     case 2:
     {
-        // Camera 2: overhead "chopper" orbit
         float radius = 10.f;
         float x = radius * cos(glm::radians(gChopperAngle));
         float z = radius * sin(glm::radians(gChopperAngle));
@@ -161,30 +177,44 @@ static glm::mat4 getViewMatrix(float dt)
         glm::vec3 up(0.f, 1.f, 0.f);
         return glm::lookAt(camPos, target, up);
     }
+    // CASE 3 = first-person from the drone’s nose
+   
     case 3:
-    {
-        // Camera 3: first-person from the drone’s nose
-        // ignoring roll for less disorienting spin
-        glm::vec3 forward = getForwardVector(gDroneYaw, gDronePitch);
-        glm::vec3 camPos  = gDronePos + forward * 0.3f;
-        glm::vec3 target  = camPos + forward;
+{
+    // Build the forward direction from yaw & pitch
+    glm::vec3 forward = getForwardVector(gDroneYaw, gDronePitch);
 
-        // Build an up vector from yaw & pitch only
-        glm::mat4 rot(1.f);
-        rot = glm::rotate(rot, glm::radians(gDroneYaw),   glm::vec3(0,1,0));
-        rot = glm::rotate(rot, glm::radians(gDronePitch), glm::vec3(1,0,0));
-        glm::vec3 up = glm::vec3(rot * glm::vec4(0,1,0,0));
+    // 1) Move the camera FURTHER forward, e.g. +1.2f
+    // 2) Shift it DOWN a bit, e.g. -0.3f in Y, so it's "under" the nose sphere.
+    glm::vec3 camPos = gDronePos
+                     + forward * 1.2f
+                     + glm::vec3(0.f, -0.3f, 0.f);
 
-        return glm::lookAt(camPos, target, up);
-    }
+    // The camera looks in the same direction
+    glm::vec3 target = camPos + forward;
+
+    // Compute 'up' from yaw/pitch
+    glm::mat4 rot(1.f);
+    rot = glm::rotate(rot, glm::radians(gDroneYaw),   glm::vec3(0,1,0));
+    rot = glm::rotate(rot, glm::radians(gDronePitch), glm::vec3(1,0,0));
+    glm::vec3 up = glm::vec3(rot * glm::vec4(0,1,0,0));
+
+    return glm::lookAt(camPos, target, up);
+}
+
+
     default:
     {
-        // Fallback vantage (shouldn't happen unless you define camera=0 etc.)
-        return glm::lookAt(glm::vec3(0.f,3.f,8.f), glm::vec3(0.f,0.f,0.f), glm::vec3(0.f,1.f,0.f));
+        // Fallback (same as case 0)
+        glm::vec3 camPos(6.f, 3.f, 6.f);
+        glm::vec3 target(0.f, 1.f, 0.f);
+        glm::vec3 up(0.f, 1.f, 0.f);
+        return glm::lookAt(camPos, target, up);
     }
     }
 }
 
+//---------------------------------------------
 int main()
 {
     // Init GLFW
@@ -197,7 +227,9 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_CORE_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(gWindowWidth, gWindowHeight, "Drone (Parts1-4) with AngledCam+Reset", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(gWindowWidth, gWindowHeight,
+        "Drone: Start Facing Camera, R to Reset, 1=TopDown, 2=Orbit, 3=FP", 
+        nullptr, nullptr);
     if(!window)
     {
         std::cerr << "Failed to create GLFW window\n";
@@ -223,7 +255,6 @@ int main()
     uniform mat4 model;
     uniform mat4 view;
     uniform mat4 projection;
-
     void main()
     {
         gl_Position = projection * view * model * vec4(aPos, 1.0);
@@ -243,7 +274,7 @@ int main()
     // Build & link our shader program
     GLuint shaderProg = createShaderProgram(vertexSrc, fragmentSrc);
 
-    // Initialize the drone geometry
+    // Initialize the drone geometry (user-provided function)
     initDroneGeometry();
 
     float lastTime = (float)glfwGetTime();
@@ -258,12 +289,12 @@ int main()
         // Process input
         processInput(window, dt);
 
-        // Propellers
+        // Update propeller angle
         gPropAngle += gPropSpeed * dt;
         if(gPropAngle > 360.f)
             gPropAngle = fmod(gPropAngle, 360.f);
 
-        // Roll
+        // Update roll
         if(gIsRolling)
         {
             gRollAngle += gRollSpeed * dt;
@@ -299,17 +330,18 @@ int main()
         GLint colorLoc = glGetUniformLocation(shaderProg, "objectColor");
         glUniform3f(colorLoc, 1.f, 1.f, 1.f); // white
 
-        // Draw the drone
+        // Draw the drone (your function).
+        // Pass the angles and position so your 'drawDrone' can build model matrices.
         drawDrone(
-            gPropAngle,
-            gRollAngle,
-            gDroneYaw,
-            gDronePitch,
-            gDronePos,
+            gPropAngle,  // prop spin
+            gRollAngle,  // roll 0..360
+            gDroneYaw,   // yaw
+            gDronePitch, // pitch
+            gDronePos,   // position
             shaderProg
         );
 
-        // (Optional) draw ground or other objects here
+        // (Optionally draw ground or other scene objects)
 
         glfwSwapBuffers(window);
         glfwPollEvents();
