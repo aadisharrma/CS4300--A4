@@ -68,17 +68,17 @@ static void processInput(GLFWwindow* window, float dt)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
-    // Speed up/slow down propellers
+    // Speed up/slow down propellers with 'f' and 's' keys
     if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
         gPropSpeed += 50.f * dt;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
     {
         gPropSpeed -= 50.f * dt;
         if(gPropSpeed < 0.f) gPropSpeed = 0.f;
     }
 
-    // Single 360 roll if not already rolling
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS && !gIsRolling)
+    // Single 360 roll if not already rolling - switch to 'j' key for sideways roll
+    if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS && !gIsRolling)
     {
         gIsRolling = true;
         gRollAngle = 0.f;
@@ -107,12 +107,12 @@ static void processInput(GLFWwindow* window, float dt)
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
         gDronePitch -= turn;
 
-    // Reset with 'r' => different orientation from startup
-    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+    // Reset with 'd' or 'D' key
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     {
-        // Put drone at center above ground, face +Z
+        // Put drone at center above ground, preserve the original orientation
         gDronePos   = glm::vec3(0.f, 1.f, 0.f);
-        gDroneYaw   = 0.f;  
+        gDroneYaw   = -45.f;  // Start with the initial orientation
         gDronePitch = 0.f;
         gIsRolling  = false;
         gRollAngle  = 0.f;
