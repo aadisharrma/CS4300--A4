@@ -11,62 +11,70 @@ void initDroneGeometry()
 {
     if (gDroneGeometryInitialized) return;
 
-    // beveled cube
-    float beveledVertices[] = {
+    float vertices[] = {
+        //    X,     Y,     Z
         // front
         -0.5f, -0.5f,  0.5f,
          0.5f, -0.5f,  0.5f,
          0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
         -0.5f,  0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
 
         // back
         -0.5f, -0.5f, -0.5f,
+        -0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
          0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+
+        // left
+        -0.5f,  0.5f,  0.5f,
+        -0.5f,  0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f,  0.5f,  0.5f,
+
+        // right
+         0.5f,  0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f,  0.5f, -0.5f,
+         0.5f,  0.5f,  0.5f,
+
+        // top
+        -0.5f,  0.5f, -0.5f,
+        -0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
+         0.5f,  0.5f,  0.5f,
          0.5f,  0.5f, -0.5f,
         -0.5f,  0.5f, -0.5f,
 
-        // edge bevel
-        -0.5f,  0.0f,  0.5f,
-         0.5f,  0.0f,  0.5f,
-         0.5f,  0.0f, -0.5f,
-        -0.5f,  0.0f, -0.5f,
-         0.0f, -0.5f,  0.5f,
-         0.0f, -0.5f, -0.5f,
-         0.0f,  0.5f,  0.5f,
-         0.0f,  0.5f, -0.5f
+        // bottom
+        -0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f, -0.5f,
+         0.5f, -0.5f,  0.5f,
+         0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f,  0.5f,
+        -0.5f, -0.5f, -0.5f
     };
 
-    unsigned int beveledIndices[] = {
-        // front
-        0, 8, 3,  8, 10, 3,  10, 2, 3,  8, 1, 10,
-        // back
-        4, 11, 7,  11, 6, 7,  11, 5, 6,  4, 5, 11,
-        // left and right
-        0, 3, 12,  3, 7, 12,  7, 4, 12,  4, 0, 12,
-        1, 6, 14,  6, 2, 14,  2, 10, 14,  10, 1, 14,
-        // top and bottom
-        3, 2, 15,  2, 6, 15,  6, 7, 15,  7, 3, 15,
-        0, 4, 13,  4, 5, 13,  5, 1, 13,  1, 0, 13
-    };
+    GLuint VBO;
+    glGenVertexArrays(1, &gCubeVAO);
+    glGenBuffers(1, &VBO);
 
-    glGenVertexArrays(1, &gBeveledCubeVAO);
-    glGenBuffers(1, &gVBO);
-    glGenBuffers(1, &gEBO);
+    glBindVertexArray(gCubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glBindVertexArray(gBeveledCubeVAO);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, gVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(beveledVertices), beveledVertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gEBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(beveledIndices), beveledIndices, GL_STATIC_DRAW);
-
-    // position attributes
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    // Position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
     glBindVertexArray(0);
-
     gDroneGeometryInitialized = true;
 }
 
@@ -78,8 +86,8 @@ static void drawCube(const glm::mat4& model, GLuint shaderProg)
     GLint modelLoc = glGetUniformLocation(shaderProg, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-    glBindVertexArray(gBeveledCubeVAO);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(gCubeVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
 }
 
