@@ -144,15 +144,20 @@ static void processInput(GLFWwindow* window, float dt,
     }
 
     // Move forward/back with '='/'-'
+    float yaw   = droneModel.getYaw();
+    float pitch = droneModel.getPitch();
+
+    glm::vec3 forward = getForwardVector(yaw, pitch);
+    
     if (glfwGetKey(window, GLFW_KEY_EQUAL) == GLFW_PRESS)
     {
         float dist = droneController.getPropSpeed() * 0.01f * dt;
-        droneController.moveForward(dist);
+        droneController.moveForward(dist, forward);
     }
     if (glfwGetKey(window, GLFW_KEY_MINUS) == GLFW_PRESS)
     {
         float dist = droneController.getPropSpeed() * 0.01f * dt;
-        droneController.moveBackward(dist);
+        droneController.moveBackward(dist, forward);
     }
 
     // Turn with arrow keys
