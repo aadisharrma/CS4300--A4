@@ -3,8 +3,15 @@ CXXFLAGS = -Wall -std=c++17 -I./include
 LDFLAGS  = -L./lib
 LIBS     = -lglad -lglfw3 -framework Cocoa -framework IOKit -framework CoreVideo -framework OpenGL
 
-SRCS   = main.cpp Drone.cpp ShaderProgram.cpp
-OBJS   = $(SRCS:.cpp=.o)
+# List of .cpp files for your main code (no glad.c here).
+SRCS = main.cpp \
+       DroneController.cpp \
+       DroneModel.cpp \
+       DroneView.cpp \
+       ShaderProgram.cpp
+
+OBJS = $(SRCS:.cpp=.o)
+
 TARGET = drone
 
 all: $(TARGET)

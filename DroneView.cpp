@@ -1,47 +1,44 @@
-#include "Drone.h"
-#include <glm/glm.hpp>
+#include "DroneView.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <vector>
 #include <cmath>
 #include <iostream>
 
-// Existing globals for the cube
-static GLuint gCubeVAO = 0;
-static bool   gDroneGeometryInitialized = false;
+DroneView::DroneView()
+    : mCubeVAO(0)
+    , mDroneGeometryInitialized(false)
+    , mSphereVAO(0)
+    , mSphereVBO(0)
+    , mSphereNumVerts(0)
+{}
 
-// NEW globals for the sphere
-static GLuint gSphereVAO = 0;
-static GLuint gSphereVBO = 0;
-static int    gSphereNumVerts = 0;  // how many vertices in our sphere
-
-// ----------------------------------------------------------
-// Generate a sphere (positions only) and store in gSphereVAO
-static void initSphereGeometry()
+DroneView::~DroneView()
 {
-    if (gSphereVAO != 0) return; // already inited
+    cleanupDrone();
+}
 
-    const int stacks = 12;
-    const int slices = 12;
-    const float PI   = 3.14159265359f;
+void DroneView::initSphereGeometry()
+{
+    if (mSphereVAO != 0) return; // already inited
 
-    std::vector<float> verts; 
-    verts.reserve(stacks * slices * 6); 
+    const int   stacks = 12;
+    const int   slices = 12;
+    const float PI     = 3.14159265359f;
 
-    // We’ll build triangle strips for each stack.
-    // Each “stack” is a ring of slices around the sphere.
+    std::vector<float> verts;
+    verts.reserve(stacks * slices * 6);
+
     for(int i = 0; i < stacks; i++)
     {
-        // phi0 and phi1 are the latitudes in radians
-        float phi0 = PI * (-0.5f + (float)i / stacks);     
-        float phi1 = PI * (-0.5f + (float)(i+1) / stacks); 
+        float phi0 = PI * (-0.5f + (float)i / stacks);
+        float phi1 = PI * (-0.5f + (float)(i+1) / stacks);
 
-        float y0 = std::sin(phi0); 
-        float r0 = std::cos(phi0); 
+        float y0 = std::sin(phi0);
+        float r0 = std::cos(phi0);
         float y1 = std::sin(phi1);
         float r1 = std::cos(phi1);
 
-        // For each stack, we connect slices in a “strip”
         for(int j = 0; j <= slices; j++)
         {
             float theta = 2.0f * PI * ((float)j / slices);
@@ -60,14 +57,14 @@ static void initSphereGeometry()
         }
     }
 
-    gSphereNumVerts = (int)verts.size() / 3; // each vertex has 3 floats
+    mSphereNumVerts = (int)verts.size() / 3;
 
     // Create VAO/VBO
-    glGenVertexArrays(1, &gSphereVAO);
-    glGenBuffers(1, &gSphereVBO);
+    glGenVertexArrays(1, &mSphereVAO);
+    glGenBuffers(1, &mSphereVBO);
 
-    glBindVertexArray(gSphereVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, gSphereVBO);
+    glBindVertexArray(mSphereVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, mSphereVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(float)*verts.size(), verts.data(), GL_STATIC_DRAW);
 
     // Position attribute
@@ -77,13 +74,11 @@ static void initSphereGeometry()
     glBindVertexArray(0);
 }
 
-// ----------------------------------------------------------
-// Existing initDroneGeometry for the cube
-void initDroneGeometry()
+void DroneView::initDroneGeometry()
 {
-    if (gDroneGeometryInitialized) return;
+    if (mDroneGeometryInitialized) return;
 
-    // 1) Initialize the cube VAO (like before)
+    // 1) Initialize the cube VAO
     float vertices[] = {
         // front
         -0.5f, -0.5f,  0.5f,
@@ -135,10 +130,10 @@ void initDroneGeometry()
     };
 
     GLuint VBO;
-    glGenVertexArrays(1, &gCubeVAO);
+    glGenVertexArrays(1, &mCubeVAO);
     glGenBuffers(1, &VBO);
 
-    glBindVertexArray(gCubeVAO);
+    glBindVertexArray(mCubeVAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
@@ -151,52 +146,40 @@ void initDroneGeometry()
     // 2) Initialize the sphere for the circular nose
     initSphereGeometry();
 
-    gDroneGeometryInitialized = true;
+    mDroneGeometryInitialized = true;
 }
 
-// ----------------------------------------------------------
-// Helpers to draw the cube or sphere
-static void drawCube(const glm::mat4& model, GLuint shaderProg)
+void DroneView::drawCube(const glm::mat4& model, GLuint shaderProg)
 {
     GLint modelLoc = glGetUniformLocation(shaderProg, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-    glBindVertexArray(gCubeVAO);
+    glBindVertexArray(mCubeVAO);
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
 }
 
-static void drawSphere(const glm::mat4& model, GLuint shaderProg)
+void DroneView::drawSphere(const glm::mat4& model, GLuint shaderProg)
 {
     GLint modelLoc = glGetUniformLocation(shaderProg, "model");
     glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
-    glBindVertexArray(gSphereVAO);
-    // We built triangle strips, but we can just draw them as a big triangle array
-    // The sphere geometry is a "strip," so to ensure it works, we can do:
-    // glDrawArrays(GL_TRIANGLE_STRIP, 0, gSphereNumVerts); 
-    // But we appended multiple strips in one array, so let's do a simple approach:
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, gSphereNumVerts);
+    glBindVertexArray(mSphereVAO);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, mSphereNumVerts);
     glBindVertexArray(0);
 }
-// ----------------------------------------------------------
-void drawDrone(
-    float propAngle,
-    float rollAngle,
-    float yaw,
-    float pitch,
-    const glm::vec3& position,
-    GLuint shaderProg
-)
+
+void DroneView::drawDrone(const DroneModel& model, GLuint shaderProg)
 {
-    float propRad  = glm::radians(propAngle);
-    float rollRad  = glm::radians(rollAngle);
-    float yawRad   = glm::radians(yaw);
-    float pitchRad = glm::radians(pitch);
+    // Convert angles to radians
+    float propRad  = glm::radians(model.getPropAngle());
+    float rollRad  = glm::radians(model.getRollAngle());
+    float yawRad   = glm::radians(model.getYaw());
+    float pitchRad = glm::radians(model.getPitch());
 
     // Base transform
     glm::mat4 drone(1.0f);
-    drone = glm::translate(drone, position);
+    drone = glm::translate(drone, model.getPosition());
     drone = glm::rotate(drone, yawRad,   glm::vec3(0,1,0));
     drone = glm::rotate(drone, pitchRad, glm::vec3(1,0,0));
     drone = glm::rotate(drone, rollRad,  glm::vec3(0,0,1));
@@ -211,20 +194,16 @@ void drawDrone(
     //------------------------------------------------
     // (A) BODY (pink)
     {
-        // Pink color: (1.0, 0.4, 0.7)
         glUniform3f(colorLoc, 1.f, 0.4f, 0.7f);
         glm::mat4 body = glm::scale(drone, glm::vec3(1.6f, 0.5f, 1.0f));
         drawCube(body, shaderProg);
     }
 
     //------------------------------------------------
-    // (B) NOSE (yellow, sphere!)
+    // (B) NOSE (yellow, sphere)
     {
-        // We place a small sphere at the front, z=+0.7
-        // Color = (1,1,0) => bright yellow
         glUniform3f(colorLoc, 1.f, 1.f, 0.f);
         glm::mat4 nose = glm::translate(drone, glm::vec3(0.f, 0.f, 0.7f));
-        // scale the sphere smaller: radius ~0.2
         nose = glm::scale(nose, glm::vec3(0.2f));
         drawSphere(nose, shaderProg);
     }
@@ -257,7 +236,7 @@ void drawDrone(
         drawCube(hub, shaderProg);
 
         // 4 blades
-        for(int i=0; i<4; i++)
+        for(int i = 0; i < 4; i++)
         {
             glm::mat4 blade = glm::translate(drone, glm::vec3(propX, 0.1f, zOff));
             blade = glm::rotate(blade, propRad, glm::vec3(0,1,0));
@@ -268,12 +247,11 @@ void drawDrone(
         }
     };
 
-    // red props
     glUniform3f(colorLoc, 1.f, 0.f, 0.f);
-    drawPropeller(-0.9f, +0.5f); 
-    drawPropeller(+0.9f, +0.5f); 
-    drawPropeller(-0.9f, -0.5f); 
-    drawPropeller(+0.9f, -0.5f); 
+    drawPropeller(-0.9f, +0.5f);
+    drawPropeller(+0.9f, +0.5f);
+    drawPropeller(-0.9f, -0.5f);
+    drawPropeller(+0.9f, -0.5f);
 
     //------------------------------------------------
     // (E) LEGS (white)
@@ -291,24 +269,23 @@ void drawDrone(
     drawLeg(+0.5f, -0.3f);
 }
 
-// ----------------------------------------------------------
-// Clean up
-void cleanupDrone()
+void DroneView::cleanupDrone()
 {
-    if(gCubeVAO != 0)
+    if(mCubeVAO != 0)
     {
-        glDeleteVertexArrays(1, &gCubeVAO);
-        gCubeVAO = 0;
+        glDeleteVertexArrays(1, &mCubeVAO);
+        mCubeVAO = 0;
     }
-    if(gSphereVAO != 0)
+    if(mSphereVAO != 0)
     {
-        glDeleteVertexArrays(1, &gSphereVAO);
-        gSphereVAO = 0;
+        glDeleteVertexArrays(1, &mSphereVAO);
+        mSphereVAO = 0;
     }
-    if(gSphereVBO != 0)
+    if(mSphereVBO != 0)
     {
-        glDeleteBuffers(1, &gSphereVBO);
-        gSphereVBO = 0;
+        glDeleteBuffers(1, &mSphereVBO);
+        mSphereVBO = 0;
     }
-    gDroneGeometryInitialized = false;
+
+    mDroneGeometryInitialized = false;
 }
