@@ -2,8 +2,6 @@ _______________________________________________________________________________
                                  README
 _______________________________________________________________________________
 
-This project demonstrates a Drone simulation using an MVC architecture.
-
 FEATURES:
 1) Model (DroneModel)
    - Stores the drone’s position, yaw, pitch, roll, and propeller angle.
