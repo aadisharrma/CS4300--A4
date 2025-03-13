@@ -99,6 +99,10 @@ static glm::mat4 getViewMatrix(float dt, DroneModel& droneModel)
 
         glm::vec3 target = camPos + forward;
 
+        // Prints out the position while camera 3 is active to show the camera is following the drone
+        glm::vec3 pos = droneModel.getPosition();
+        std::cout << "Drone Position: (" << pos.x << ", " << pos.y << ", " << pos.z << ")" << std::endl;
+
         // Compute 'up' from yaw/pitch
         glm::mat4 rot(1.f);
         rot = glm::rotate(rot, glm::radians(yaw),   glm::vec3(0,1,0));
