@@ -24,8 +24,8 @@ public:
     void turnPitch(float amount);
 
     // Movement
-    void moveForward(float dist);
-    void moveBackward(float dist);
+    void moveForward(float dist, glm::vec3 forward);
+    void moveBackward(float dist, glm::vec3 forward);
 
     // Reset
     void reset();
