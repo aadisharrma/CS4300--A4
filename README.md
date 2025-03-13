@@ -15,7 +15,7 @@ FEATURES:
    - Responds to user input to update the drone’s state.
 
 4) Multiple Cameras
-   - Angled vantage, top-down, orbit, and first-person.
+   - Angled vantage, top-down, orbit, and first-person (prints position data to terminal so users can see it functioning).
 
 5) Animations
    - Spinning propellers and 360° drone roll.
@@ -53,3 +53,7 @@ USAGE:
    - "make clean" removes object files and the executable.
 
 _______________________________________________________________________________
+
+Distribution:
+
+We worked colaboratively throughout this project with Aadi taking the lead on parts 2 and 4 and Ben taking lead on parts 1 and 3.
