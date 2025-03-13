@@ -76,21 +76,8 @@ void DroneController::turnPitch(float amount)
     mModel.setPitch(pitch);
 }
 
-void DroneController::moveForward(float dist)
+void DroneController::moveForward(float dist, glm::vec3 forward)
 {
-    // Build forward vector from yaw/pitch
-    glm::vec3 baseForward(0.f, 0.f, 1.f);
-
-    float yawRad   = glm::radians(mModel.getYaw());
-    float pitchRad = glm::radians(mModel.getPitch());
-
-    glm::vec3 forward;
-    forward.x = baseForward.x * cos(yawRad) - baseForward.z * sin(yawRad);
-    forward.y = sin(pitchRad);
-    forward.z = baseForward.z * cos(yawRad) + baseForward.x * sin(yawRad);
-
-    forward = glm::normalize(forward);
-
     glm::vec3 pos = mModel.getPosition();
     pos += forward * dist;
     mModel.setPosition(pos);
