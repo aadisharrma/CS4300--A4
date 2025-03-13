@@ -166,8 +166,8 @@ static void processInput(GLFWwindow* window, float dt,
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
         droneController.turnPitch(-turn);
 
-    // Reset with 'R'
-    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+    // Reset with 'D'
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     {
         droneController.reset();
         gCurrentCamera = 0;
