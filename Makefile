@@ -1,9 +1,25 @@
-CXX      = g++
-CXXFLAGS = -Wall -std=c++17 -I./include
-LDFLAGS  = -L./lib
-LIBS     = -lglad -lglfw3 -framework Cocoa -framework IOKit -framework CoreVideo -framework OpenGL
+OS := $(shell uname 2>/dev/null || echo Unknown)
 
-# List of .cpp files for your main code (no glad.c here).
+CXX      = g++
+CXXFLAGS = -Wall -std=c++17
+LDFLAGS  =
+LIBS     =
+
+# OS-specific flags
+ifeq ($(OS), Darwin)
+    CXXFLAGS += -I./include
+    LDFLAGS  += -L./lib
+    LIBS     += -lglad -lglfw3 -framework Cocoa -framework IOKit -framework CoreVideo -framework OpenGL
+else ifeq ($(OS), Linux)
+    CXXFLAGS += -I./include
+    LDFLAGS  += -L./lib
+    LIBS     += -lglad -lglfw -lGL -ldl -lpthread
+else
+    CXXFLAGS += -I./include
+    LDFLAGS  += -L./lib
+    LIBS     += -lglad -lglfw3 -lopengl32 -lgdi32
+endif
+
 SRCS = main.cpp \
        DroneController.cpp \
        DroneModel.cpp \
@@ -11,7 +27,6 @@ SRCS = main.cpp \
        ShaderProgram.cpp
 
 OBJS = $(SRCS:.cpp=.o)
-
 TARGET = drone
 
 all: $(TARGET)
